@@ -2,15 +2,15 @@ package datastore
 
 import (
 	"sync"
-	"tasks_manager/httputils"
+	"tasks_manager/errors"
 	"tasks_manager/task"
 )
 
 type DataStoreApi interface {
-	Save(key string, value []byte) error
-	LoadTask(key string) ([]byte, error)
-	DeleteTask(key string) error
-	GetTasks() (map[string][]byte, error)
+	CreateTask(task task.Task) error
+	LoadTask(id int64) (task.Task, error)
+	DeleteTask(id int64) error
+	GetTasks() ([]task.Task, error)
 }
 
 type DataStore struct {
@@ -24,12 +24,12 @@ func NewDataStore() *DataStore {
 	}
 }
 
-func (ds *DataStore) Save(t task.Task) error {
+func (ds *DataStore) CreateTask(t task.Task) error {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 
 	if _, ok := ds.data[t.ID]; ok {
-		return httputils.ErrTaskAlreadyExists
+		return errors.ErrTaskAlreadyExists
 	}
 
 	ds.data[t.ID] = t
@@ -42,7 +42,7 @@ func (ds *DataStore) LoadTask(id int64) (task.Task, error) {
 	if t, ok := ds.data[id]; ok {
 		return t, nil
 	}
-	return task.Task{}, httputils.ErrTaskNotFound
+	return task.Task{}, errors.ErrTaskNotFound
 }
 
 func (ds *DataStore) DeleteTask(id int64) error {
@@ -52,7 +52,7 @@ func (ds *DataStore) DeleteTask(id int64) error {
 		delete(ds.data, id)
 		return nil
 	}
-	return httputils.ErrTaskNotFound
+	return errors.ErrTaskNotFound
 }
 
 func (ds *DataStore) GetTasks() ([]task.Task, error) {
