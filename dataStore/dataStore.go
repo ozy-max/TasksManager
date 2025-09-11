@@ -6,25 +6,25 @@ import (
 	"tasks_manager/task"
 )
 
-type DataStore interface {
+type DataStoreApi interface {
 	Save(key string, value []byte) error
 	LoadTask(key string) ([]byte, error)
 	DeleteTask(key string) error
 	GetTasks() (map[string][]byte, error)
 }
 
-type DataStoreImpl struct {
+type DataStore struct {
 	data map[int64]task.Task
 	mtx  sync.Mutex
 }
 
-func NewDataStore() *DataStoreImpl {
-	return &DataStoreImpl{
+func NewDataStore() *DataStore {
+	return &DataStore{
 		data: make(map[int64]task.Task),
 	}
 }
 
-func (ds *DataStoreImpl) Save(t task.Task) error {
+func (ds *DataStore) Save(t task.Task) error {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 
@@ -36,7 +36,7 @@ func (ds *DataStoreImpl) Save(t task.Task) error {
 	return nil
 }
 
-func (ds *DataStoreImpl) LoadTask(id int64) (task.Task, error) {
+func (ds *DataStore) LoadTask(id int64) (task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	if t, ok := ds.data[id]; ok {
@@ -45,7 +45,7 @@ func (ds *DataStoreImpl) LoadTask(id int64) (task.Task, error) {
 	return task.Task{}, httputils.ErrTaskNotFound
 }
 
-func (ds *DataStoreImpl) DeleteTask(id int64) error {
+func (ds *DataStore) DeleteTask(id int64) error {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	if _, ok := ds.data[id]; ok {
@@ -55,7 +55,7 @@ func (ds *DataStoreImpl) DeleteTask(id int64) error {
 	return httputils.ErrTaskNotFound
 }
 
-func (ds *DataStoreImpl) GetTasks() ([]task.Task, error) {
+func (ds *DataStore) GetTasks() ([]task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	tasks := make([]task.Task, 0, len(ds.data))
