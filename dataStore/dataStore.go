@@ -24,7 +24,7 @@ func NewDataStore() *DataStore {
 	}
 }
 
-func (ds *DataStore) CreateTask(t task.Task) error {
+func (ds *DataStore) HandleCreateTask(t task.Task) error {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 
@@ -36,7 +36,7 @@ func (ds *DataStore) CreateTask(t task.Task) error {
 	return nil
 }
 
-func (ds *DataStore) LoadTask(id int64) (task.Task, error) {
+func (ds *DataStore) HandleLoadTask(id int64) (task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	if t, ok := ds.data[id]; ok {
@@ -45,7 +45,22 @@ func (ds *DataStore) LoadTask(id int64) (task.Task, error) {
 	return task.Task{}, errors.ErrTaskNotFound
 }
 
-func (ds *DataStore) DeleteTask(id int64) error {
+func (ds *DataStore) HandleLoadAllUncompletedTasks(t task.Task) (map[int64]task.Task, error) {
+	ds.mtx.Lock()
+	defer ds.mtx.Unlock()
+	uncompletedTasks := make(map[int64]task.Task)
+	for id, task := range ds.data {
+		if !task.Completed {
+			uncompletedTasks[id] = task
+		}
+	}
+	if len(uncompletedTasks) == 0 {
+		return nil, errors.ErrTaskNotFound
+	}
+	return uncompletedTasks, nil
+}
+
+func (ds *DataStore) HandleDeleteTask(id int64) error {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	if _, ok := ds.data[id]; ok {
@@ -55,7 +70,7 @@ func (ds *DataStore) DeleteTask(id int64) error {
 	return errors.ErrTaskNotFound
 }
 
-func (ds *DataStore) GetTasks() ([]task.Task, error) {
+func (ds *DataStore) HandleGetTasks() ([]task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	tasks := make([]task.Task, 0, len(ds.data))

@@ -12,7 +12,7 @@ import (
 	"tasks_manager/task"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 )
 
 type HTTPHandlers struct {
@@ -100,7 +100,7 @@ failed:
   - response body: JSON with error + time
 */
 func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
-	stringId := mux.Vars(r)["id"]
+	stringId := chi.URLParam(r, "id")
 	if num, err := strconv.ParseInt(stringId, 10, 64); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		errDTO := dto.ErrorDTO{
