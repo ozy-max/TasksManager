@@ -16,12 +16,12 @@ type Task struct {
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
-func NewTask(title, description string, completed bool) *Task {
+func NewTask(title, description string) *Task {
 	return &Task{
 		ID:          int64(uuid.New().ID()),
 		Title:       title,
 		Description: description,
-		Completed:   completed,
+		Completed:   false,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   nil,
 	}

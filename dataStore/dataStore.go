@@ -8,8 +8,8 @@ import (
 
 type DataStoreApi interface {
 	HandleCreateTask(task task.Task) error
-	HandleLoadTask(id int64) (task.Task, error)
-	HandleLoadAllUncompletedTasks(t task.Task) (map[int64]task.Task, error)
+	HandleGetTask(id int64) (task.Task, error)
+	HandleGetAllUncompletedTasks(t task.Task) (map[int64]task.Task, error)
 	HandleDeleteTask(id int64) error
 	HandleGetTasks() ([]task.Task, error)
 }
@@ -37,7 +37,7 @@ func (ds *DataStore) HandleCreateTask(t task.Task) error {
 	return nil
 }
 
-func (ds *DataStore) HandleLoadTask(id int64) (task.Task, error) {
+func (ds *DataStore) HandleGetTask(id int64) (task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	if t, ok := ds.data[id]; ok {
@@ -46,7 +46,7 @@ func (ds *DataStore) HandleLoadTask(id int64) (task.Task, error) {
 	return task.Task{}, errors.ErrTaskNotFound
 }
 
-func (ds *DataStore) HandleLoadAllUncompletedTasks(t task.Task) (map[int64]task.Task, error) {
+func (ds *DataStore) HandleGetAllUncompletedTasks(t task.Task) (map[int64]task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
 	uncompletedTasks := make(map[int64]task.Task)

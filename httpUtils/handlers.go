@@ -58,10 +58,8 @@ func (h *HTTPHandlers) HandleCreateTask(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Создаем новую задачу
-	createdTask := task.NewTask(taskDto.Title, taskDto.Description, false)
+	createdTask := task.NewTask(taskDto.Title, taskDto.Description)
 
-	// Сохраняем задачу в хранилище
 	if err := h.datastore.HandleCreateTask(*createdTask); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		errDTO := dto.ErrorDTO{
@@ -75,7 +73,7 @@ func (h *HTTPHandlers) HandleCreateTask(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
-	b, err := json.Marshal(createdTask)
+	b, err := json.MarshalIndent(createdTask, "", "  ")
 	if err != nil {
 		panic(err)
 	}
@@ -87,7 +85,7 @@ func (h *HTTPHandlers) HandleCreateTask(w http.ResponseWriter, r *http.Request) 
 }
 
 /*
-pattern: /tasks/{title}
+pattern: /tasks/{id}
 method:  GET
 info:    pattern
 
@@ -101,7 +99,7 @@ failed:
 */
 func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 	stringId := chi.URLParam(r, "id")
-	if num, err := strconv.ParseInt(stringId, 10, 64); err != nil {
+	if id, err := strconv.ParseInt(stringId, 10, 64); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		errDTO := dto.ErrorDTO{
 			Message: "invalid task ID",
@@ -110,7 +108,7 @@ func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 		return
 	} else {
-		if t, err := h.datastore.HandleLoadTask(num); err != nil {
+		if t, err := h.datastore.HandleGetTask(id); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			errDTO := dto.ErrorDTO{
 				Message: err.Error(),
