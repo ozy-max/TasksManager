@@ -7,10 +7,11 @@ import (
 )
 
 type DataStoreApi interface {
-	CreateTask(task task.Task) error
-	LoadTask(id int64) (task.Task, error)
-	DeleteTask(id int64) error
-	GetTasks() ([]task.Task, error)
+	HandleCreateTask(task task.Task) error
+	HandleLoadTask(id int64) (task.Task, error)
+	HandleLoadAllUncompletedTasks(t task.Task) (map[int64]task.Task, error)
+	HandleDeleteTask(id int64) error
+	HandleGetTasks() ([]task.Task, error)
 }
 
 type DataStore struct {

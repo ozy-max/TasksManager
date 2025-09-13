@@ -62,7 +62,7 @@ func (h *HTTPHandlers) HandleCreateTask(w http.ResponseWriter, r *http.Request) 
 	createdTask := task.NewTask(taskDto.Title, taskDto.Description, false)
 
 	// Сохраняем задачу в хранилище
-	if err := h.datastore.CreateTask(*createdTask); err != nil {
+	if err := h.datastore.HandleCreateTask(*createdTask); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		errDTO := dto.ErrorDTO{
 			Message: err.Error(),
@@ -110,7 +110,7 @@ func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
 		return
 	} else {
-		if t, err := h.datastore.LoadTask(num); err != nil {
+		if t, err := h.datastore.HandleLoadTask(num); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			errDTO := dto.ErrorDTO{
 				Message: err.Error(),
