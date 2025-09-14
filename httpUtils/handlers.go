@@ -180,7 +180,7 @@ func (h *HTTPHandlers) HandleGetAllTasks(w http.ResponseWriter, r *http.Request)
 }
 
 /*
-pattern: /tasks?completed=true <<--- ребята тут я зафакапил, конечно же, если мы получаем список НЕвыполненных задач, то в query параметре должно быть completed=false, а не true
+pattern: /tasks?completed=false
 method:  GET
 info:    query params
 
@@ -207,7 +207,7 @@ func (h *HTTPHandlers) HandleGetAllUncompletedTasks(w http.ResponseWriter, r *ht
 }
 
 /*
-pattern: /tasks/{title}
+pattern: /tasks?id={id}&completed={true/false}
 method:  PATCH
 info:    pattern + JSON in request body
 
