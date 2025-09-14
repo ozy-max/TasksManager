@@ -22,9 +22,9 @@ func (s *Server) StartServer(port string) error {
 	// Регистрируем маршруты
 	router.Path("/tasks").Methods("POST").HandlerFunc(s.handlers.HandleCreateTask)
 
-	router.Path("/tasks").Methods("GET").HandlerFunc(s.handlers.HandleGetAllTasks)
-
 	router.Path("/tasks").Methods("GET").Queries("completed", "false").HandlerFunc(s.handlers.HandleGetAllUncompletedTasks)
+
+	router.Path("/tasks").Methods("GET").HandlerFunc(s.handlers.HandleGetAllTasks)
 
 	router.Path("/tasks/{id}").Methods("GET").HandlerFunc(s.handlers.HandleGetTask)
 

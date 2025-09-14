@@ -1,7 +1,6 @@
 package datastore
 
 import (
-	"fmt"
 	"sync"
 	"tasks_manager/errors"
 	"tasks_manager/task"
@@ -68,7 +67,6 @@ func (ds *DataStore) HandleGetAllUncompletedTasks() []task.Task {
 
 	var result []task.Task
 	for _, task := range ds.data {
-		fmt.Println("task =======>>>>>>>>>>>>", task)
 		if !task.Completed {
 			result = append(result, task)
 		}
