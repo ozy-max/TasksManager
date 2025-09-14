@@ -5,7 +5,8 @@ import (
 	"net/http"
 	handlers "tasks_manager/httpUtils"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Server struct {
@@ -17,32 +18,33 @@ func NewServer(handlers *handlers.HTTPHandlers) *Server {
 }
 
 func (s *Server) StartServer(port string) error {
-	router := mux.NewRouter()
+	r := chi.NewRouter()
 
-	// Регистрируем маршруты
-	router.Path("/tasks").Methods("POST").HandlerFunc(s.handlers.HandleCreateTask)
+	// middleware
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)    // логирование запросов
+	r.Use(middleware.Recoverer) // защита от паник
 
-	router.Path("/tasks").Methods("GET").Queries("completed", "false").HandlerFunc(s.handlers.HandleGetAllUncompletedTasks)
+	// маршруты
+	r.Route("/tasks", func(r chi.Router) {
+		r.Post("/", s.handlers.HandleCreateTask)
 
-	router.Path("/tasks").Methods("GET").HandlerFunc(s.handlers.HandleGetAllTasks)
+		r.Get("/", s.handlers.HandleGetAllTasks) // все задачи или фильтр по completed
+		r.Get("/{id}", s.handlers.HandleGetTask) // задача по ID
 
-	router.Path("/tasks/{id}").Methods("GET").HandlerFunc(s.handlers.HandleGetTask)
+		r.Patch("/", s.handlers.HandleUpdateTask)  // ?id={id}&completed={completed}
+		r.Delete("/", s.handlers.HandleDeleteTask) // ?id={id}
+	})
 
-	router.Path("/tasks").Methods("PATCH").
-		Queries("id", "{id}", "completed", "{completed}").
-		HandlerFunc(s.handlers.HandleUpdateTask)
-
-	router.Path("/tasks").Methods("DELETE").Queries("id", "{id}").HandlerFunc(s.handlers.HandleDeleteTask)
-
-	// Debug: добавляем логирование всех маршрутов
 	log.Println("Зарегистрированные маршруты:")
-	log.Println("POST /tasks - создание задачи")
-	log.Println("GET /tasks - получение всех задач")
-	log.Println("GET /tasks?completed=false - получение незавершенных задач")
-	log.Println("GET /tasks/{id} - получение задачи по ID")
-	log.Println("PATCH /tasks/{id}/{completed} - обновление задачи")
-	log.Println("DELETE /tasks?id={id} - удаление задачи")
-
+	log.Println("POST   /tasks                  - создание задачи")
+	log.Println("GET    /tasks                  - получение всех задач")
+	log.Println("GET    /tasks?completed=false  - получение незавершенных задач")
+	log.Println("GET    /tasks/{id}             - получение задачи по ID")
+	log.Println("PATCH  /tasks?id={id}&completed={completed} - обновление задачи")
+	log.Println("DELETE /tasks?id={id}          - удаление задачи")
 	log.Printf("Сервер запускается на порту %s", port)
-	return http.ListenAndServe(":"+port, router)
+
+	return http.ListenAndServe(":"+port, r)
 }

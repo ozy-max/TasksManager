@@ -12,7 +12,7 @@ import (
 	"tasks_manager/task"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 )
 
 type HTTPHandlers struct {
@@ -98,7 +98,7 @@ failed:
   - response body: JSON with error + time
 */
 func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
-	stringId := mux.Vars(r)["id"]
+	stringId := chi.URLParam(r, "id")
 
 	if id, err := strconv.ParseInt(stringId, 10, 64); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -149,6 +149,15 @@ failed:
   - response body: JSON with error + time
 */
 func (h *HTTPHandlers) HandleGetAllTasks(w http.ResponseWriter, r *http.Request) {
+	completedParam := r.URL.Query().Get("completed")
+
+	// Если есть параметр completed=false, возвращаем только незавершенные задачи
+	if completedParam == "false" {
+		h.HandleGetAllUncompletedTasks(w, r)
+		return
+	}
+
+	// Иначе возвращаем все задачи
 	if tasks, err := h.datastore.HandleGetTasks(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		errDTO := dto.ErrorDTO{
