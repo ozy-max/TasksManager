@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"fmt"
 	"sync"
 	"tasks_manager/errors"
 	"tasks_manager/task"
@@ -8,8 +9,9 @@ import (
 
 type DataStoreApi interface {
 	HandleCreateTask(task task.Task) error
+	HandleUpdateTask(task task.Task) error
 	HandleGetTask(id int64) (task.Task, error)
-	HandleGetAllUncompletedTasks(t task.Task) (map[int64]task.Task, error)
+	HandleGetAllUncompletedTasks() []task.Task
 	HandleDeleteTask(id int64) error
 	HandleGetTasks() ([]task.Task, error)
 }
@@ -37,6 +39,20 @@ func (ds *DataStore) HandleCreateTask(t task.Task) error {
 	return nil
 }
 
+func (ds *DataStore) HandleUpdateTask(t task.Task) error {
+	ds.mtx.Lock()
+	defer ds.mtx.Unlock()
+
+	task, ok := ds.data[t.ID]
+	if !ok {
+		return errors.ErrTaskNotFound
+	}
+
+	task.Completed = t.Completed
+	ds.data[t.ID] = task
+	return nil
+}
+
 func (ds *DataStore) HandleGetTask(id int64) (task.Task, error) {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
@@ -46,19 +62,18 @@ func (ds *DataStore) HandleGetTask(id int64) (task.Task, error) {
 	return task.Task{}, errors.ErrTaskNotFound
 }
 
-func (ds *DataStore) HandleGetAllUncompletedTasks(t task.Task) (map[int64]task.Task, error) {
+func (ds *DataStore) HandleGetAllUncompletedTasks() []task.Task {
 	ds.mtx.Lock()
 	defer ds.mtx.Unlock()
-	uncompletedTasks := make(map[int64]task.Task)
-	for id, task := range ds.data {
+
+	var result []task.Task
+	for _, task := range ds.data {
+		fmt.Println("task =======>>>>>>>>>>>>", task)
 		if !task.Completed {
-			uncompletedTasks[id] = task
+			result = append(result, task)
 		}
 	}
-	if len(uncompletedTasks) == 0 {
-		return nil, errors.ErrTaskNotFound
-	}
-	return uncompletedTasks, nil
+	return result
 }
 
 func (ds *DataStore) HandleDeleteTask(id int64) error {

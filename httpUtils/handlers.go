@@ -183,7 +183,19 @@ failed:
   - status code: 400, 500, ...
   - response body: JSON with error + time
 */
-func (h *HTTPHandlers) HandleGetAllUncompletedTasks(w http.ResponseWriter, r *http.Request) {}
+func (h *HTTPHandlers) HandleGetAllUncompletedTasks(w http.ResponseWriter, r *http.Request) {
+	uncompletedTasks := h.datastore.HandleGetAllUncompletedTasks()
+
+	if byte, err := json.MarshalIndent(uncompletedTasks, "", "  "); err != nil {
+		panic(err)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(byte); err != nil {
+			fmt.Println("failed to write response:", err)
+			return
+		}
+	}
+}
 
 /*
 pattern: /tasks/{title}
@@ -198,9 +210,15 @@ failed:
   - status code: 400, 409, 500, ...
   - response body: JSON with error + time
 */
-func (h *HTTPHandlers) HandleCompleteTask(w http.ResponseWriter, r *http.Request) {
-	stringId := mux.Vars(r)["id"]
-	if id, err := strconv.ParseInt(stringId, 10, 64); err != nil {
+func (h *HTTPHandlers) HandleUpdateTask(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	completedStr := r.URL.Query().Get("completed")
+	isCompleted, err := strconv.ParseBool(completedStr)
+	if err != nil {
+		http.Error(w, "invalid completed value", http.StatusBadRequest)
+		return
+	}
+	if id, err := strconv.ParseInt(idStr, 10, 64); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		errDTO := dto.ErrorDTO{
 			Message: "invalid task ID",
@@ -222,15 +240,15 @@ func (h *HTTPHandlers) HandleCompleteTask(w http.ResponseWriter, r *http.Request
 			}
 			return
 		} else {
-			t.Completed = true
-			if err := h.datastore.HandleCreateTask(t); err != nil {
+			t.Completed = isCompleted
+			if err := h.datastore.HandleUpdateTask(t); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				errDTO := dto.ErrorDTO{
 					Message: err.Error(),
 					Time:    time.Now(),
 				}
-				if errors.Is(err, apperrors.ErrTaskAlreadyExists) {
-					http.Error(w, errDTO.ToString(), http.StatusConflict)
+				if errors.Is(err, apperrors.ErrTaskNotFound) {
+					http.Error(w, errDTO.ToString(), http.StatusNotFound)
 				} else {
 					http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
 				}
