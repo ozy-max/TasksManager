@@ -20,15 +20,13 @@ func NewServer(handlers *handlers.HTTPHandlers) *Server {
 func (s *Server) StartServer(port string) error {
 	r := chi.NewRouter()
 
-	// middleware
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	r.Use(middleware.RequestID) // уникальный ID для каждого запроса
+	r.Use(middleware.RealIP)    // определение реального IP клиента
 	r.Use(middleware.Logger)    // логирование запросов
 	r.Use(middleware.Recoverer) // защита от паник
 
-	// маршруты
 	r.Route("/tasks", func(r chi.Router) {
-		r.Post("/", s.handlers.HandleCreateTask)
+		r.Post("/", s.handlers.HandleCreateTask) // создание задачи
 
 		r.Get("/", s.handlers.HandleGetAllTasks) // все задачи или фильтр по completed
 		r.Get("/{id}", s.handlers.HandleGetTask) // задача по ID
@@ -37,14 +35,6 @@ func (s *Server) StartServer(port string) error {
 		r.Delete("/", s.handlers.HandleDeleteTask) // ?id={id}
 	})
 
-	log.Println("Зарегистрированные маршруты:")
-	log.Println("POST   /tasks                  - создание задачи")
-	log.Println("GET    /tasks                  - получение всех задач")
-	log.Println("GET    /tasks?completed=false  - получение незавершенных задач")
-	log.Println("GET    /tasks/{id}             - получение задачи по ID")
-	log.Println("PATCH  /tasks?id={id}&completed={completed} - обновление задачи")
-	log.Println("DELETE /tasks?id={id}          - удаление задачи")
 	log.Printf("Сервер запускается на порту %s", port)
-
 	return http.ListenAndServe(":"+port, r)
 }
