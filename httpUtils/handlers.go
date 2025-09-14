@@ -12,7 +12,7 @@ import (
 	"tasks_manager/task"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/mux"
 )
 
 type HTTPHandlers struct {
@@ -98,7 +98,8 @@ failed:
   - response body: JSON with error + time
 */
 func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
-	stringId := chi.URLParam(r, "id")
+	stringId := mux.Vars(r)["id"]
+
 	if id, err := strconv.ParseInt(stringId, 10, 64); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		errDTO := dto.ErrorDTO{
@@ -121,7 +122,7 @@ func (h *HTTPHandlers) HandleGetTask(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		} else {
-			if byte, err := json.Marshal(t); err != nil {
+			if byte, err := json.MarshalIndent(t, "", "  "); err != nil {
 				panic(err)
 			} else {
 				w.WriteHeader(http.StatusOK)
@@ -147,7 +148,27 @@ failed:
   - status code: 400, 500, ...
   - response body: JSON with error + time
 */
-func (h *HTTPHandlers) HandleGetAllTasks(w http.ResponseWriter, r *http.Request) {}
+func (h *HTTPHandlers) HandleGetAllTasks(w http.ResponseWriter, r *http.Request) {
+	if tasks, err := h.datastore.HandleGetTasks(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		errDTO := dto.ErrorDTO{
+			Message: err.Error(),
+			Time:    time.Now(),
+		}
+		http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+		return
+	} else {
+		if byte, err := json.MarshalIndent(tasks, "", "  "); err != nil {
+			panic(err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(byte); err != nil {
+				fmt.Println("failed to write response:", err)
+				return
+			}
+		}
+	}
+}
 
 /*
 pattern: /tasks?completed=true <<--- ребята тут я зафакапил, конечно же, если мы получаем список НЕвыполненных задач, то в query параметре должно быть completed=false, а не true
@@ -177,12 +198,62 @@ failed:
   - status code: 400, 409, 500, ...
   - response body: JSON with error + time
 */
-func (h *HTTPHandlers) HandleCompleteTask(w http.ResponseWriter, r *http.Request) {}
+func (h *HTTPHandlers) HandleCompleteTask(w http.ResponseWriter, r *http.Request) {
+	stringId := mux.Vars(r)["id"]
+	if id, err := strconv.ParseInt(stringId, 10, 64); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		errDTO := dto.ErrorDTO{
+			Message: "invalid task ID",
+			Time:    time.Now(),
+		}
+		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		return
+	} else {
+		if t, err := h.datastore.HandleGetTask(id); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			errDTO := dto.ErrorDTO{
+				Message: err.Error(),
+				Time:    time.Now(),
+			}
+			if errors.Is(err, apperrors.ErrTaskNotFound) {
+				http.Error(w, errDTO.ToString(), http.StatusNotFound)
+			} else {
+				http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+			}
+			return
+		} else {
+			t.Completed = true
+			if err := h.datastore.HandleCreateTask(t); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				errDTO := dto.ErrorDTO{
+					Message: err.Error(),
+					Time:    time.Now(),
+				}
+				if errors.Is(err, apperrors.ErrTaskAlreadyExists) {
+					http.Error(w, errDTO.ToString(), http.StatusConflict)
+				} else {
+					http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+				}
+				return
+			} else {
+				if byte, err := json.MarshalIndent(t, "", "  "); err != nil {
+					panic(err)
+				} else {
+					w.WriteHeader(http.StatusOK)
+					if _, err := w.Write(byte); err != nil {
+						fmt.Println("failed to write response:", err)
+						return
+					}
+				}
+			}
+		}
+	}
+}
 
 /*
-pattern: /tasks/{title}
+pattern: /tasks?id={id}
 method:  DELETE
-info:    pattern
+info:    query parameter
 
 succeed:
   - status code: 204 No Content
@@ -192,4 +263,44 @@ failed:
   - status code: 400, 404, 500, ...
   - response body: JSON with error + time
 */
-func (h *HTTPHandlers) HandleDeleteTask(w http.ResponseWriter, r *http.Request) {}
+func (h *HTTPHandlers) HandleDeleteTask(w http.ResponseWriter, r *http.Request) {
+	stringId := r.URL.Query().Get("id")
+
+	if stringId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		errDTO := dto.ErrorDTO{
+			Message: "missing task ID in query parameter",
+			Time:    time.Now(),
+		}
+		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		fmt.Println("missing task ID in query parameter")
+		return
+	}
+
+	if id, err := strconv.ParseInt(stringId, 10, 64); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		errDTO := dto.ErrorDTO{
+			Message: "invalid task ID",
+			Time:    time.Now(),
+		}
+		http.Error(w, errDTO.ToString(), http.StatusBadRequest)
+		return
+	} else {
+		if err := h.datastore.HandleDeleteTask(id); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			errDTO := dto.ErrorDTO{
+				Message: err.Error(),
+				Time:    time.Now(),
+			}
+			if errors.Is(err, apperrors.ErrTaskNotFound) {
+				http.Error(w, errDTO.ToString(), http.StatusNotFound)
+			} else {
+				http.Error(w, errDTO.ToString(), http.StatusInternalServerError)
+			}
+			return
+		} else {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
+}

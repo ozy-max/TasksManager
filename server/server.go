@@ -5,8 +5,7 @@ import (
 	"net/http"
 	handlers "tasks_manager/httpUtils"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gorilla/mux"
 )
 
 type Server struct {
@@ -18,22 +17,22 @@ func NewServer(handlers *handlers.HTTPHandlers) *Server {
 }
 
 func (s *Server) StartServer(port string) error {
-	router := chi.NewRouter()
+	router := mux.NewRouter()
 
 	// Добавляем middleware
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.RequestID)
+	router.Use(Logger)
+	router.Use(Recoverer)
+	router.Use(RequestID)
 
-	// Настройка маршрутов
-	router.Route("/tasks", func(r chi.Router) {
-		r.Post("/", s.handlers.HandleCreateTask)            // POST /tasks
-		r.Get("/", s.handlers.HandleGetAllTasks)            // GET /tasks
-		r.Get("/", s.handlers.HandleGetAllUncompletedTasks) // GET /tasks?completed=false
-		r.Get("/{id}", s.handlers.HandleGetTask)            // GET /tasks/{id}
-		r.Patch("/{id}", s.handlers.HandleCompleteTask)     // PATCH /tasks/{id}
-		r.Delete("/{id}", s.handlers.HandleDeleteTask)      // DELETE /tasks/{id}
-	})
+	// Регистрируем маршруты
+
+	// Debug: добавляем логирование всех маршрутов
+	log.Println("Зарегистрированные маршруты:")
+	log.Println("POST /tasks - создание задачи")
+	log.Println("GET /tasks - получение всех задач")
+	log.Println("GET /tasks/{id} - получение задачи по ID")
+	log.Println("PATCH /tasks/{id} - обновление задачи")
+	log.Println("DELETE /task?id={id} - удаление задачи")
 
 	log.Printf("Сервер запускается на порту %s", port)
 	return http.ListenAndServe(":"+port, router)
